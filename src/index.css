@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Archivo Black", "Arial Black", Impact, sans-serif;
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --shadow-brutal: 8px 8px 0 0 #000;
+  --shadow-brutal-sm: 4px 4px 0 0 #000;
+  --shadow-brutal-xs: 2px 2px 0 0 #000;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #FFDE59;
+  color: #000;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+@theme {
+  --animate-pop: pop 150ms ease-out;
+  @keyframes pop {
+    from { transform: scale(0.96) rotate(-1deg); }
+    to { transform: scale(1) rotate(0); }
+  }
+}
