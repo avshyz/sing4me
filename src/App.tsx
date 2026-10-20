@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion, useMotionValue, useTransform } from 'motion/react'
 import type { PanInfo } from 'motion/react'
 import { WORDS } from './words'
+import { countdownBeep, goBeep, initAudio, vibrate } from './feedback'
 
 const UNIQUE_WORDS = Array.from(new Set(WORDS))
 const COLORS = ['#FF90E8', '#A6FAFF', '#B8FF9F', '#FFA07A', '#C4A1FF', '#FFFFFF']
@@ -154,36 +155,69 @@ export default function App() {
 }
 
 function Intro({ onDone }: { onDone: () => void }) {
-  const [step, setStep] = useState(0)
+  // -1 = waiting for a tap: browsers only allow audio after a user gesture.
+  const [step, setStep] = useState(-1)
 
   useEffect(() => {
-    const t = setTimeout(
-      () => (step + 1 < INTRO_STEPS.length ? setStep(step + 1) : onDone()),
-      INTRO_STEP_MS,
-    )
+    if (step < 0) return
+    const t = setTimeout(() => {
+      const nextStep = step + 1
+      if (nextStep < INTRO_STEPS.length) {
+        setStep(nextStep)
+        if (nextStep === INTRO_STEPS.length - 1) goBeep()
+        else countdownBeep()
+      } else {
+        onDone()
+      }
+    }, INTRO_STEP_MS)
     return () => clearTimeout(t)
   }, [step, onDone])
 
-  const current = INTRO_STEPS[step]
+  const start = () => {
+    initAudio()
+    countdownBeep()
+    setStep(0)
+  }
+
+  const current = step < 0 ? null : INTRO_STEPS[step]
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#FFDE59] bg-[radial-gradient(rgba(0,0,0,0.16)_1.5px,transparent_1.5px)] [background-size:22px_22px]"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-[#FFDE59] bg-[radial-gradient(rgba(0,0,0,0.16)_1.5px,transparent_1.5px)] [background-size:22px_22px]"
       exit={{ opacity: 0, transition: { duration: 0.3 } }}
-      onClick={onDone}
+      onClick={step < 0 ? start : onDone}
     >
       <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          className="rounded-3xl border-4 border-black px-8 py-4 font-display text-[clamp(3rem,18vw,8rem)] leading-none uppercase"
-          style={{ backgroundColor: current.color }}
-          initial={{ scale: 0.3, opacity: 0, rotate: -8 }}
-          animate={{ scale: 1, opacity: 1, rotate: 0 }}
-          exit={{ scale: 1.4, opacity: 0, transition: { duration: 0.18, ease: 'easeIn' } }}
-          transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-        >
-          {current.text}
-        </motion.div>
+        {current ? (
+          <motion.div
+            key={step}
+            className="rounded-3xl border-4 border-black px-8 py-4 font-display text-[clamp(3rem,18vw,8rem)] leading-none uppercase"
+            style={{ backgroundColor: current.color }}
+            initial={{ scale: 0.3, opacity: 0, rotate: -8 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            exit={{ scale: 1.4, opacity: 0, transition: { duration: 0.18, ease: 'easeIn' } }}
+            transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+          >
+            {current.text}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="tap"
+            className="flex flex-col items-center gap-4"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 1.2, opacity: 0, transition: { duration: 0.15 } }}
+          >
+            <motion.div
+              className="rounded-3xl border-4 border-black bg-white px-8 py-5 font-display text-[clamp(2rem,10vw,4rem)] leading-none uppercase shadow-brutal"
+              animate={{ scale: [1, 1.04, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              Tap to start
+            </motion.div>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-60">sound on 🔊</p>
+          </motion.div>
+        )}
       </AnimatePresence>
     </motion.div>
   )
@@ -220,7 +254,10 @@ function Card({ number, word, color, position, enterFrom, onSwipe }: CardProps) 
   const onDragEnd = (_: unknown, info: PanInfo) => {
     const swiped =
       Math.abs(info.offset.x) > SWIPE_DISTANCE || Math.abs(info.velocity.x) > SWIPE_VELOCITY
-    if (swiped) onSwipe(info.offset.x > 0 ? 1 : -1)
+    if (swiped) {
+      vibrate(25)
+      onSwipe(info.offset.x > 0 ? 1 : -1)
+    }
   }
 
   return (
