@@ -12,6 +12,13 @@ const SWIPE_DISTANCE = 90
 const SWIPE_VELOCITY = 500
 const FLY_X = 900
 
+const INTRO_STEPS = [
+  { text: 'Ready', color: '#FF90E8' },
+  { text: 'Set', color: '#A6FAFF' },
+  { text: 'Go!', color: '#B8FF9F' },
+]
+const INTRO_STEP_MS = 750
+
 type Dir = -1 | 1
 
 const spring = { type: 'spring', stiffness: 280, damping: 26 } as const
@@ -26,6 +33,7 @@ function shuffle<T>(items: T[]): T[] {
 }
 
 export default function App() {
+  const [phase, setPhase] = useState<'intro' | 'play'>('intro')
   const [deck, setDeck] = useState(() => shuffle(UNIQUE_WORDS))
   const [index, setIndex] = useState(0)
   const [exitDir, setExitDir] = useState<Dir>(1)
@@ -33,6 +41,8 @@ export default function App() {
   const [exitDirs, setExitDirs] = useState<Record<number, Dir>>({})
   // Card that should fly back in (set by "prev"), null after "next".
   const [reentry, setReentry] = useState<{ index: number; dir: Dir } | null>(null)
+
+  const startGame = useCallback(() => setPhase('play'), [])
 
   const next = useCallback(
     (dir: Dir = 1) => {
@@ -52,6 +62,7 @@ export default function App() {
   }, [index, exitDirs])
 
   useEffect(() => {
+    if (phase !== 'play') return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
         e.preventDefault()
@@ -63,7 +74,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [next, prev])
+  }, [phase, next, prev])
 
   const pile = Array.from({ length: STACK }, (_, p) => index + p).filter((i) => i < deck.length)
 
@@ -77,6 +88,8 @@ export default function App() {
         paddingRight: 'max(1rem, env(safe-area-inset-right))',
       }}
     >
+      <AnimatePresence>{phase === 'intro' && <Intro onDone={startGame} />}</AnimatePresence>
+
       <header className="flex w-full max-w-sm items-center justify-between">
         <h1 className="font-display text-2xl tracking-tight sm:text-3xl">
           SING<span className="text-[#FF90E8] [-webkit-text-stroke:2px_black]">4</span>ME
@@ -92,26 +105,35 @@ export default function App() {
           style={{ width: 'min(24rem, 100%, 46dvh)', marginBottom: (STACK - 1) * OFFSET }}
         >
           <AnimatePresence custom={exitDir}>
-            {pile
-              .slice()
-              .reverse()
-              .map((i) => {
-                const position = i - index
-                const enterFrom = reentry?.index === i ? reentry.dir : null
-                return (
-                  <Card
-                    key={i}
-                    number={i + 1}
-                    word={deck[i]}
-                    color={COLORS[i % COLORS.length]}
-                    position={position}
-                    enterFrom={enterFrom}
-                    onSwipe={next}
-                  />
-                )
-              })}
+            {phase === 'play' &&
+              pile
+                .slice()
+                .reverse()
+                .map((i) => {
+                  const position = i - index
+                  const enterFrom = reentry?.index === i ? reentry.dir : null
+                  return (
+                    <Card
+                      key={i}
+                      number={i + 1}
+                      word={deck[i]}
+                      color={COLORS[i % COLORS.length]}
+                      position={position}
+                      enterFrom={enterFrom}
+                      onSwipe={next}
+                    />
+                  )
+                })}
           </AnimatePresence>
         </div>
+        <motion.p
+          className="mt-6 text-xs font-bold uppercase tracking-[0.3em] opacity-60"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: phase === 'play' ? 0.6 : 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          ← swipe →
+        </motion.p>
       </main>
 
       <footer className="grid w-full max-w-sm grid-cols-2 gap-4">
@@ -130,11 +152,44 @@ export default function App() {
         >
           Next →
         </button>
-        <p className="col-span-2 text-center text-xs font-bold uppercase tracking-widest opacity-60">
-          Swipe the card to skip
-        </p>
       </footer>
     </div>
+  )
+}
+
+function Intro({ onDone }: { onDone: () => void }) {
+  const [step, setStep] = useState(0)
+
+  useEffect(() => {
+    const t = setTimeout(
+      () => (step + 1 < INTRO_STEPS.length ? setStep(step + 1) : onDone()),
+      INTRO_STEP_MS,
+    )
+    return () => clearTimeout(t)
+  }, [step, onDone])
+
+  const current = INTRO_STEPS[step]
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#FFDE59] bg-[radial-gradient(rgba(0,0,0,0.16)_1.5px,transparent_1.5px)] [background-size:22px_22px]"
+      exit={{ opacity: 0, transition: { duration: 0.3 } }}
+      onClick={onDone}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          className="rounded-3xl border-4 border-black px-8 py-4 font-display text-[clamp(3rem,18vw,8rem)] leading-none uppercase"
+          style={{ backgroundColor: current.color }}
+          initial={{ scale: 0.3, opacity: 0, rotate: -8 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          exit={{ scale: 1.4, opacity: 0, transition: { duration: 0.18, ease: 'easeIn' } }}
+          transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+        >
+          {current.text}
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
   )
 }
 
@@ -194,7 +249,7 @@ function Card({ number, word, color, position, enterFrom, onSwipe }: CardProps) 
       transition={spring}
     >
       <motion.div
-        className={`@container flex h-full w-full flex-col justify-between rounded-3xl border-4 border-black p-5 sm:p-6 ${
+        className={`@container relative flex h-full w-full items-center justify-center rounded-3xl border-4 border-black p-5 sm:p-6 ${
           isTop ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
         style={{ x, rotate, backgroundColor: color }}
@@ -204,18 +259,12 @@ function Card({ number, word, color, position, enterFrom, onSwipe }: CardProps) 
         onDragEnd={onDragEnd}
         whileTap={isTop ? { scale: 1.02 } : undefined}
       >
-        <div className="flex justify-end">
-          <span className="font-display text-xl leading-none">♪</span>
-        </div>
+        <span className="absolute top-5 right-5 font-display text-xl leading-none sm:top-6 sm:right-6">
+          ♪
+        </span>
 
-        <div className="text-center">
-          <p className="font-display leading-none uppercase" style={wordStyle}>
-            {word}
-          </p>
-        </div>
-
-        <p className="text-center text-[10px] font-bold uppercase tracking-[0.3em] opacity-50">
-          ← swipe →
+        <p className="text-center font-display leading-none uppercase" style={wordStyle}>
+          {word}
         </p>
 
         {isTop && (
