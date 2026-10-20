@@ -6,7 +6,8 @@ import { WORDS } from './words'
 const UNIQUE_WORDS = Array.from(new Set(WORDS))
 const COLORS = ['#FF90E8', '#A6FAFF', '#B8FF9F', '#FFA07A', '#C4A1FF', '#FFFFFF']
 
-const STACK = 3 // cards visible in the pile
+const STACK = 6 // cards visible in the pile
+const OFFSET = 12 // px each card peeks out below the one above
 const SWIPE_DISTANCE = 90
 const SWIPE_VELOCITY = 500
 const FLY_X = 900
@@ -88,7 +89,7 @@ export default function App() {
       <main className="flex w-full flex-1 flex-col items-center justify-center py-6">
         <div
           className="relative aspect-[4/5]"
-          style={{ width: 'min(24rem, 100%, 46dvh)' }}
+          style={{ width: 'min(24rem, 100%, 46dvh)', marginBottom: (STACK - 1) * OFFSET }}
         >
           <AnimatePresence custom={exitDir}>
             {pile
@@ -159,9 +160,9 @@ function Card({ number, word, color, position, enterFrom, onSwipe }: CardProps) 
 
   const rest = {
     x: 0,
-    y: position * 18,
-    scale: 1 - position * 0.06,
-    rotate: position === 0 ? 0 : position * (number % 2 ? 2.5 : -2.5),
+    y: position * OFFSET,
+    scale: 1 - position * 0.04,
+    rotate: position === 0 ? 0 : number % 2 ? 2 : -2,
     opacity: 1,
   }
 
@@ -178,7 +179,7 @@ function Card({ number, word, color, position, enterFrom, onSwipe }: CardProps) 
       initial={
         enterFrom
           ? { x: enterFrom * FLY_X, y: 0, scale: 1, rotate: enterFrom * 20, opacity: 0 }
-          : { x: 0, y: (position + 1) * 18, scale: 1 - (position + 1) * 0.06, rotate: 0, opacity: 0 }
+          : { x: 0, y: (position + 1) * OFFSET, scale: 1 - (position + 1) * 0.04, rotate: 0, opacity: 0 }
       }
       animate={rest}
       variants={{
@@ -193,7 +194,7 @@ function Card({ number, word, color, position, enterFrom, onSwipe }: CardProps) 
       transition={spring}
     >
       <motion.div
-        className={`@container flex h-full w-full flex-col justify-between border-4 border-black p-5 shadow-brutal sm:p-6 ${
+        className={`@container flex h-full w-full flex-col justify-between rounded-3xl border-4 border-black p-5 sm:p-6 ${
           isTop ? 'cursor-grab active:cursor-grabbing' : ''
         }`}
         style={{ x, rotate, backgroundColor: color }}
@@ -203,17 +204,11 @@ function Card({ number, word, color, position, enterFrom, onSwipe }: CardProps) 
         onDragEnd={onDragEnd}
         whileTap={isTop ? { scale: 1.02 } : undefined}
       >
-        <div className="flex items-start justify-between">
-          <span className="border-3 border-black bg-white px-2 py-0.5 text-xs font-bold shadow-brutal-xs">
-            #{number}
-          </span>
+        <div className="flex justify-end">
           <span className="font-display text-xl leading-none">♪</span>
         </div>
 
         <div className="text-center">
-          <p className="mb-4 inline-block border-3 border-black bg-black px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-white">
-            Find a song with
-          </p>
           <p className="font-display leading-none uppercase" style={wordStyle}>
             {word}
           </p>
