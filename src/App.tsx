@@ -136,21 +136,17 @@ export default function App() {
         </motion.p>
       </main>
 
-      <footer className="grid w-full max-w-sm grid-cols-2 gap-4">
+      <footer className="flex w-full max-w-sm justify-center">
         <button
           type="button"
           onClick={prev}
           disabled={index === 0}
-          className="h-16 border-4 border-black bg-white text-xl font-bold uppercase shadow-brutal-sm transition-[transform,box-shadow] duration-75 touch-manipulation active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:active:translate-0 disabled:active:shadow-brutal-sm"
+          aria-label="Previous word"
+          className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-black bg-white shadow-brutal-sm transition-[transform,box-shadow] duration-75 touch-manipulation active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-40 disabled:active:translate-0 disabled:active:shadow-brutal-sm"
         >
-          ← Prev
-        </button>
-        <button
-          type="button"
-          onClick={() => next(1)}
-          className="h-16 border-4 border-black bg-black text-xl font-bold uppercase text-white shadow-brutal-sm transition-[transform,box-shadow] duration-75 touch-manipulation active:translate-x-1 active:translate-y-1 active:shadow-none"
-        >
-          Next →
+          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor" aria-hidden="true">
+            <path d="M11 6v12L2 12l9-6zm11 0v12l-9-6 9-6z" />
+          </svg>
         </button>
       </footer>
     </div>
